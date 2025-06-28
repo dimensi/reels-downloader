@@ -18,20 +18,16 @@ class DownloaderService {
 
     try {
       // Уведомляем админа о начале обработки
-      if (fromId) {
-        await telegramService.notifyStatus(fromId, 'Начата обработка запроса', `URL: ${url}`);
-      }
+      await telegramService.notifyStatus(fromId, 'Начата обработка запроса', `URL: ${url}`);
 
       // Проверяем доступность чата
       const chatAccessible = await telegramService.checkChatAccess(chatId);
       if (!chatAccessible) {
-        if (fromId) {
-          await telegramService.notifyError(
-            fromId,
-            'Чат недоступен или бот не имеет доступа к нему',
-            `Chat ID: ${chatId}`
-          );
-        }
+        await telegramService.notifyError(
+          fromId,
+          'Чат недоступен или бот не имеет доступа к нему',
+          `Chat ID: ${chatId}`
+        );
         return {
           success: false,
           message: 'Чат недоступен или бот не имеет доступа к нему',
@@ -56,13 +52,11 @@ class DownloaderService {
       const isFileSizeOk = await checkFileSize(videoPath, config.maxFileSizeMB);
       if (!isFileSizeOk) {
         await removeFile(videoPath);
-        if (fromId) {
-          await telegramService.notifyError(
-            fromId,
-            `Файл слишком большой. Максимальный размер: ${config.maxFileSizeMB}MB`,
-            `File: ${safeTitle}`
-          );
-        }
+        await telegramService.notifyError(
+          fromId,
+          `Файл слишком большой. Максимальный размер: ${config.maxFileSizeMB}MB`,
+          `File: ${safeTitle}`
+        );
         return {
           success: false,
           message: `Файл слишком большой. Максимальный размер: ${config.maxFileSizeMB}MB`,
@@ -81,9 +75,7 @@ class DownloaderService {
       await removeFile(videoPath);
 
       // Уведомляем админа об успехе
-      if (fromId) {
-        await telegramService.notifyStatus(fromId, 'Видео успешно отправлено', `В чат: ${chatId}`);
-      }
+      await telegramService.notifyStatus(fromId, 'Видео успешно отправлено', `В чат: ${chatId}`);
 
       return {
         success: true,
@@ -95,23 +87,7 @@ class DownloaderService {
       const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
 
       // Уведомляем админа об ошибке
-      if (fromId) {
-        await telegramService.notifyError(fromId, errorMessage, `URL: ${url}, Chat: ${chatId}`);
-      }
-
-      // Уведомляем пользователя об ошибке только если есть fromId
-      if (fromId) {
-        try {
-          await telegramService.sendMessage(chatId, `❌ Ошибка обработки видео: ${errorMessage}`);
-        } catch (telegramError) {
-          console.error('Ошибка отправки сообщения об ошибке:', telegramError);
-          await telegramService.notifyError(
-            fromId,
-            'Не удалось отправить сообщение об ошибке в чат',
-            `Telegram Error: ${telegramError}`
-          );
-        }
-      }
+      await telegramService.notifyError(fromId, errorMessage, `URL: ${url}, Chat: ${chatId}`);
 
       return {
         success: false,

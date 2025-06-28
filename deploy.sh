@@ -22,30 +22,10 @@ echo "📁 Создаем временную папку: $TEMP_DIR"
 echo "📦 Копируем файлы проекта во временную папку..."
 rsync -av --exclude 'dist' --exclude 'downloads' --exclude 'node_modules' --exclude '.git' ./ $TEMP_DIR/
 
-# Явно копируем .env файл, если он существует
-if [ -f .env ]; then
-  echo "📄 Копируем .env файл..."
-  cp .env $TEMP_DIR/
-else
-  echo "⚠️ .env файл не найден!"
-fi
-
 echo "🚀 Копируем проект на сервер..."
 scp -r $TEMP_DIR/* $SERVER_IP:$REMOTE_DIR
-
-# Проверяем, что .env файл успешно скопирован
-echo "🔍 Проверяем наличие .env файла на сервере..."
-if ssh $SERVER_IP "[ -f $REMOTE_DIR/.env ]"; then
-  echo "✅ .env файл успешно скопирован на сервер"
-else
-  echo "❌ .env файл не найден на сервере! Пробуем скопировать отдельно..."
-  scp .env $SERVER_IP:$REMOTE_DIR/
-  if ssh $SERVER_IP "[ -f $REMOTE_DIR/.env ]"; then
-    echo "✅ .env файл успешно скопирован на сервер при повторной попытке"
-  else
-    echo "❌ Не удалось скопировать .env файл на сервер!"
-  fi
-fi
+scp -r $TEMP_DIR/.env $SERVER_IP:$REMOTE_DIR/.env
+scp -r $TEMP_DIR/.swcrc $SERVER_IP:$REMOTE_DIR/.swcrc
 
 # Удаляем временную папку
 rm -rf $TEMP_DIR

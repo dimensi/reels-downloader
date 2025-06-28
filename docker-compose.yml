@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   reels-downloader:
@@ -7,7 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: reels-downloader
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000

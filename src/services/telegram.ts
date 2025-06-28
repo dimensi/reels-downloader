@@ -92,7 +92,10 @@ class TelegramService {
   /**
    * Отправить уведомление администратору
    */
-  async notifyAdmin(fromId: string, message: string): Promise<void> {
+  async notifyAdmin(fromId: string | undefined, message: string): Promise<void> {
+    if (!fromId) {
+      return;
+    }
     try {
       await this.bot.sendMessage(fromId, `🔔 Уведомление:\n${message}`);
     } catch (error) {
@@ -103,7 +106,10 @@ class TelegramService {
   /**
    * Отправить ошибку администратору
    */
-  async notifyError(fromId: string, error: string, context?: string): Promise<void> {
+  async notifyError(fromId: string | undefined, error: string, context?: string): Promise<void> {
+    if (!fromId) {
+      return;
+    }
     try {
       let message = `🚨 Ошибка: ${error}`;
       if (context) {
@@ -118,7 +124,10 @@ class TelegramService {
   /**
    * Отправить статус обработки
    */
-  async notifyStatus(fromId: string, status: string, details?: string): Promise<void> {
+  async notifyStatus(fromId: string | undefined, status: string, details?: string): Promise<void> {
+    if (!fromId) {
+      return;
+    }
     try {
       let message = `📊 Статус: ${status}`;
       if (details) {
