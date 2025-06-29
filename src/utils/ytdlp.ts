@@ -9,13 +9,16 @@ import config from '../config';
  */
 export async function getReelInfo(url: string): Promise<ReelInfo> {
   return new Promise((resolve, reject) => {
-    const ytdlp = spawn('yt-dlp', [
+    const args = [
+      ...(config.proxyURL ? ['--proxy', config.proxyURL] : []),
       '--dump-json',
       '--cookies',
       'cookies.txt',
       '--no-warnings',
       url,
-    ]);
+    ].flat();
+
+    const ytdlp = spawn('yt-dlp', args);
 
     let data = '';
     let error = '';
@@ -60,16 +63,16 @@ export async function downloadReel(
     const outputPath = path.join(outputFolder, filename);
 
     const args = [
+      ...(config.proxyURL ? ['--proxy', config.proxyURL] : []),
+      '--no-playlist',
+      '--no-warnings',
+      '--cookies',
+      'cookies.txt',
       '-f',
       'mp4',
       '-o',
       outputPath,
       url,
-      '--no-playlist',
-      '--no-warnings',
-      ...(config.proxyURL ? ['--proxy', config.proxyURL] : []),
-      '--cookies',
-      'cookies.txt',
     ].flat();
 
     const ytdlp = spawn('yt-dlp', args);
