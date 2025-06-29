@@ -9,6 +9,58 @@ import {
 import telegramService from './telegram';
 import config from '../config';
 
+class NotifyService {
+  private chatId: string;
+  private fromId: string | undefined;
+  private startTime: number;
+  private currentState: string;
+  private url: string;
+  constructor(chatId: string, fromId: string | undefined, url: string) {
+    this.chatId = chatId;
+    this.fromId = fromId;
+    this.startTime = Date.now();
+    this.currentState = 'START';
+    this.url = url;
+  }
+
+  changeState(state: 'START' | 'IN_PROGRESS' | 'FINISHED') {
+    this.currentState = state;
+    return this.checkUpdate();
+  }
+
+  async checkUpdate() {
+    const elapsedTime = Date.now() - this.startTime;
+
+    if (elapsedTime < 30e3) {
+      return;
+    }
+
+    switch (this.currentState) {
+      case 'START':
+        await telegramService.notifyStatus(
+          this.fromId,
+          'Начата обработка запроса',
+          `URL: ${this.url}`
+        );
+        break;
+      case 'IN_PROGRESS':
+        await telegramService.notifyStatus(
+          this.fromId,
+          'В процессе обработки запроса',
+          `URL: ${this.url}`
+        );
+        break;
+      case 'FINISHED':
+        await telegramService.notifyStatus(
+          this.fromId,
+          'Видео успешно отправлено',
+          `В чат: ${this.chatId}`
+        );
+        break;
+    }
+  }
+}
+
 class DownloaderService {
   /**
    * Основная функция для скачивания и отправки видео
@@ -16,9 +68,10 @@ class DownloaderService {
   async processReelDownload(request: DownloadRequest): Promise<DownloadResponse> {
     const { url, chatId, fromId } = request;
 
+    const notifyService = new NotifyService(chatId, fromId, url);
+
     try {
-      // Уведомляем админа о начале обработки
-      await telegramService.notifyStatus(fromId, 'Начата обработка запроса', `URL: ${url}`);
+      await notifyService.changeState('START');
 
       // Проверяем доступность чата
       const chatAccessible = await telegramService.checkChatAccess(chatId);
@@ -48,6 +101,8 @@ class DownloaderService {
 
       const videoPath = await downloadReel(url, filename, config.downloadsPath);
 
+      await notifyService.changeState('IN_PROGRESS');
+
       // Проверяем размер файла
       const isFileSizeOk = await checkFileSize(videoPath, config.maxFileSizeMB);
       if (!isFileSizeOk) {
@@ -74,8 +129,7 @@ class DownloaderService {
       // Удаляем файл после отправки
       await removeFile(videoPath);
 
-      // Уведомляем админа об успехе
-      await telegramService.notifyStatus(fromId, 'Видео успешно отправлено', `В чат: ${chatId}`);
+      await notifyService.changeState('FINISHED');
 
       return {
         success: true,
@@ -100,7 +154,7 @@ class DownloaderService {
   /**
    * Создать подпись для видео
    */
-  private async createVideoCaption(reelInfo: ReelInfo, fromId?: string): Promise<string> {
+  private async createVideoCaption(_: ReelInfo, fromId?: string): Promise<string> {
     // Если fromId не указан - возвращаем пустую подпись
     if (!fromId) {
       return '';
@@ -108,28 +162,28 @@ class DownloaderService {
 
     const parts: string[] = [];
 
-    // Получаем информацию о пользователе Telegram
-    const userInfo = await telegramService.getUserInfo(fromId);
-    let userDisplay = fromId; // fallback к ID если не удалось получить данные
+    // // Получаем информацию о пользователе Telegram
+    // const userInfo = await telegramService.getUserInfo(fromId);
+    // let userDisplay = fromId; // fallback к ID если не удалось получить данные
 
-    if (userInfo) {
-      if (userInfo.username) {
-        userDisplay = `@${userInfo.username}`;
-      } else if (userInfo.firstName) {
-        userDisplay = userInfo.firstName;
-      }
-    }
+    // if (userInfo) {
+    //   if (userInfo.username) {
+    //     userDisplay = `@${userInfo.username}`;
+    //   } else if (userInfo.firstName) {
+    //     userDisplay = userInfo.firstName;
+    //   }
+    // }
 
     // Добавляем информацию от кого запрос
-    parts.push(`👤 ${userDisplay}`);
+    // parts.push(`👤 ${userDisplay}`);
 
-    if (reelInfo.title) {
-      parts.push(`📝 ${reelInfo.title}`);
-    }
+    // if (reelInfo.title) {
+    //   parts.push(`📝 ${reelInfo.title}`);
+    // }
 
-    if (reelInfo.description && reelInfo.description.length < 100) {
-      parts.push(`📄 ${reelInfo.description}`);
-    }
+    // if (reelInfo.description && reelInfo.description.length < 100) {
+    //   parts.push(`📄 ${reelInfo.description}`);
+    // }
 
     return parts.join('\n');
   }
