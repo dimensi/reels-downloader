@@ -12,6 +12,7 @@ const config: Config = {
   maxFileSizeMB: Number(process.env.MAX_FILE_SIZE_MB) || 50,
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 минут
   rateLimitMaxRequests: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 10,
+  proxyURL: process.env.PROXY_URL || '',
 };
 
 // Валидация обязательных переменных

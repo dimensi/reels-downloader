@@ -35,4 +35,5 @@ export interface Config {
   maxFileSizeMB: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
+  proxyURL: string;
 }

@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { ReelInfo } from '../types';
+import config from '../config';
 
 /**
  * Получить метаинформацию о рилсе
@@ -66,9 +67,10 @@ export async function downloadReel(
       url,
       '--no-playlist',
       '--no-warnings',
+      ...(config.proxyURL ? ['--proxy', config.proxyURL] : []),
       '--cookies',
       'cookies.txt',
-    ];
+    ].flat();
 
     const ytdlp = spawn('yt-dlp', args);
 
