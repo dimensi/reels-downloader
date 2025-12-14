@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { ApiResponse, DownloadRequest } from '../types';
 import downloaderService from '../services/downloader';
+import simpleDownloaderService from '../services/simpleDownloader';
+import config from '../config';
 import { validateDownloadRequest } from '../middleware/validation';
 import { downloadRateLimit } from '../middleware/rateLimiter';
 import { validateToken } from '../middleware/auth';
@@ -26,8 +28,11 @@ router.post(
         message: 'Запрос принят. Видео будет обработано и отправлено в указанный чат.',
       });
 
+      // Выбираем сервис для загрузки
+      const service = config.useLegacyDownloader ? downloaderService : simpleDownloaderService;
+
       // Обрабатываем запрос асинхронно
-      downloaderService
+      service
         .processReelDownload(downloadRequest)
         .then((result) => {
           console.log('Обработка завершена:', result);

@@ -36,4 +36,5 @@ export interface Config {
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
   proxyURL: string;
+  useLegacyDownloader: boolean;
 }

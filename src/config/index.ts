@@ -13,6 +13,7 @@ const config: Config = {
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 минут
   rateLimitMaxRequests: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 10,
   proxyURL: process.env.PROXY_URL || '',
+  useLegacyDownloader: process.env.USE_LEGACY_DOWNLOADER === 'true',
 };
 
 // Валидация обязательных переменных
