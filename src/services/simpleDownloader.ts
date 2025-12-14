@@ -97,7 +97,7 @@ class SimpleDownloaderService {
       await telegramService.sendVideo(chatId, filename, '');
 
       // Удаляем файл после отправки
-      // await fs.remove(filename);
+      await fs.remove(filename);
 
       await notifyService.changeState('FINISHED');
 
