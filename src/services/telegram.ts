@@ -2,6 +2,7 @@ import TelegramBot from 'node-telegram-bot-api';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import config from '../config';
+import { getVideoMetadata } from '../utils/videoMetadata';
 
 class TelegramService {
   private bot: TelegramBot;
@@ -45,13 +46,33 @@ class TelegramService {
         throw new Error(`Файл не найден: ${realVideoPath}`);
       }
 
-      // Отправляем видео с правильным content-type
+      // Получаем метаданные видео для правильного соотношения сторон
+      const metadata = await getVideoMetadata(realVideoPath);
+
+      // Формируем опции для Telegram API
+      // Используем type assertion, так как supports_streaming есть в API,
+      // но отсутствует в типах @types/node-telegram-bot-api
+      const telegramOptions: TelegramBot.SendVideoOptions & { supports_streaming?: boolean } = {
+        caption: caption || '',
+        supports_streaming: true, // Включаем streaming для лучшего отображения
+      };
+
+      // Добавляем размеры видео если удалось получить метаданные
+      if (metadata) {
+        telegramOptions.width = metadata.width;
+        telegramOptions.height = metadata.height;
+        console.log(
+          `Метаданные видео: ${metadata.width}x${metadata.height}, длительность: ${metadata.duration.toFixed(2)}с`
+        );
+      }
+
+      // Отправляем видео с правильным content-type и метаданными
+      // Согласно документации node-telegram-bot-api, нужно передать пустой объект {}
+      // для дополнительных Telegram query options, если их нет, а затем fileOptions
       await this.bot.sendVideo(
         chatId,
         realVideoPath,
-        {
-          caption: caption || '',
-        },
+        telegramOptions,
         {
           contentType: 'video/mp4',
           filename: path.basename(realVideoPath),
