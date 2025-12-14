@@ -1,22 +1,26 @@
-import TelegramBot from 'node-telegram-bot-api';
+import { Telegraf, Input } from 'telegraf';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import config from '../config';
 import { getVideoMetadata } from '../utils/videoMetadata';
 
 class TelegramService {
-  private bot: TelegramBot;
+  private bot: Telegraf;
 
   constructor() {
-    this.bot = new TelegramBot(config.telegramBotToken);
-    this.bot.startPolling();
+    this.bot = new Telegraf(config.telegramBotToken);
 
-    this.bot.onText(/\/get_id/, async (msg) => {
-      this.bot.sendMessage(msg.chat.id, `Ваш ID чата: ${msg.chat.id}`);
+    // Регистрация команды /get_id
+    this.bot.command('get_id', async (ctx) => {
+      await ctx.reply(`Ваш ID чата: ${ctx.chat.id}`);
     });
 
-    process.on('SIGTERM', () => this.bot.stopPolling());
-    process.on('SIGINT', () => this.bot.stopPolling());
+    // Запуск polling (асинхронно, без await)
+    this.bot.launch();
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => this.bot.stop('SIGTERM'));
+    process.on('SIGINT', () => this.bot.stop('SIGINT'));
   }
 
   /**
@@ -49,35 +53,20 @@ class TelegramService {
       // Получаем метаданные видео для правильного соотношения сторон
       const metadata = await getVideoMetadata(realVideoPath);
 
-      // Формируем опции для Telegram API
-      // Используем type assertion, так как supports_streaming есть в API,
-      // но отсутствует в типах @types/node-telegram-bot-api
-      const telegramOptions: TelegramBot.SendVideoOptions & { supports_streaming?: boolean } = {
-        caption: caption || '',
-        supports_streaming: true, // Включаем streaming для лучшего отображения
-      };
-
-      // Добавляем размеры видео если удалось получить метаданные
+      // Логируем метаданные если удалось их получить
       if (metadata) {
-        telegramOptions.width = metadata.width;
-        telegramOptions.height = metadata.height;
         console.log(
           `Метаданные видео: ${metadata.width}x${metadata.height}, длительность: ${metadata.duration.toFixed(2)}с`
         );
       }
 
-      // Отправляем видео с правильным content-type и метаданными
-      // Согласно документации node-telegram-bot-api, нужно передать пустой объект {}
-      // для дополнительных Telegram query options, если их нет, а затем fileOptions
-      await this.bot.sendVideo(
-        chatId,
-        realVideoPath,
-        telegramOptions,
-        {
-          contentType: 'video/mp4',
-          filename: path.basename(realVideoPath),
-        }
-      );
+      // Отправляем видео с помощью Telegraf
+      await this.bot.telegram.sendVideo(chatId, Input.fromLocalFile(realVideoPath), {
+        caption: caption || '',
+        supports_streaming: true,
+        ...(metadata?.width && { width: metadata.width }),
+        ...(metadata?.height && { height: metadata.height }),
+      });
 
       console.log(`Видео успешно отправлено в чат ${chatId}`);
     } catch (error) {
@@ -91,7 +80,7 @@ class TelegramService {
    */
   async sendMessage(chatId: string, text: string): Promise<void> {
     try {
-      await this.bot.sendMessage(chatId, text);
+      await this.bot.telegram.sendMessage(chatId, text);
     } catch (error) {
       console.error('Ошибка отправки сообщения в Telegram:', error);
       throw new Error(`Не удалось отправить сообщение: ${error}`);
@@ -103,7 +92,7 @@ class TelegramService {
    */
   async checkChatAccess(chatId: string): Promise<boolean> {
     try {
-      await this.bot.getChat(chatId);
+      await this.bot.telegram.getChat(chatId);
       return true;
     } catch {
       return false;
@@ -118,7 +107,7 @@ class TelegramService {
       return;
     }
     try {
-      await this.bot.sendMessage(fromId, `🔔 Уведомление:\n${message}`);
+      await this.bot.telegram.sendMessage(fromId, `🔔 Уведомление:\n${message}`);
     } catch (error) {
       console.error('Ошибка отправки уведомления администратору:', error);
     }
@@ -136,7 +125,7 @@ class TelegramService {
       if (context) {
         message += `\n📍 Контекст: ${context}`;
       }
-      await this.bot.sendMessage(fromId, message);
+      await this.bot.telegram.sendMessage(fromId, message);
     } catch (err) {
       console.error('Ошибка отправки ошибки администратору:', err);
     }
@@ -154,7 +143,7 @@ class TelegramService {
       if (details) {
         message += `\n💬 ${details}`;
       }
-      await this.bot.sendMessage(fromId, message);
+      await this.bot.telegram.sendMessage(fromId, message);
     } catch (error) {
       console.error('Ошибка отправки статуса администратору:', error);
     }
@@ -165,13 +154,14 @@ class TelegramService {
    */
   async getUserInfo(userId: string): Promise<{ username?: string; firstName?: string } | null> {
     try {
-      const chat = await this.bot.getChat(userId);
+      const chat = await this.bot.telegram.getChat(userId);
+      // В Telegraf chat типизирован корректно
       const result: { username?: string; firstName?: string } = {};
 
-      if (chat.username) {
+      if ('username' in chat && chat.username) {
         result.username = chat.username;
       }
-      if (chat.first_name) {
+      if ('first_name' in chat && chat.first_name) {
         result.firstName = chat.first_name;
       }
 
