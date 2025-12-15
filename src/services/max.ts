@@ -158,7 +158,11 @@ class MaxService {
       throw new Error('Не удалось создать закачку файла в Max');
     }
 
-    return { uploadId: upload.upload_id, fileId: upload.file_id };
+    const descriptor: MaxUploadDescriptor = { uploadId: upload.upload_id };
+    if (upload.file_id) {
+      descriptor.fileId = upload.file_id;
+    }
+    return descriptor;
   }
 
   private async uploadFileParts(
