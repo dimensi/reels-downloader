@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { ApiResponse } from '../types';
+import { ApiResponse, MessagingChannel } from '../types';
+import config from '../config';
 import downloaderService from '../services/downloader';
 
 export const validateDownloadRequest = (
@@ -8,6 +9,17 @@ export const validateDownloadRequest = (
   next: NextFunction
 ) => {
   const { url, chatId, fromId } = req.body;
+  const channel = ((req.query.channel as string) || req.body.channel || config.defaultChannel) as
+    | MessagingChannel
+    | undefined;
+
+  if (channel && !['telegram', 'max'].includes(channel)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Неверный канал доставки. Доступны: telegram, max',
+      error: 'INVALID_CHANNEL',
+    });
+  }
 
   // Проверка наличия обязательных полей
   if (!url || !chatId) {
@@ -36,23 +48,26 @@ export const validateDownloadRequest = (
     });
   }
 
-  // Валидация chatId (должен быть числом или начинаться с -)
-  if (!/^-?\d+$/.test(chatId)) {
+  // Валидация chatId
+  const normalizedChannel = (channel || config.defaultChannel) as MessagingChannel;
+  if (normalizedChannel === 'telegram' && !/^-?\d+$/.test(chatId)) {
     return res.status(400).json({
       success: false,
-      message: 'Неверный формат chatId',
+      message: 'Неверный формат chatId для Telegram',
       error: 'INVALID_CHAT_ID',
     });
   }
 
-  // Валидация fromId (опционально, но если есть - должен быть числом)
-  if (fromId && !/^-?\d+$/.test(fromId)) {
+  // Валидация fromId (опционально)
+  if (fromId && normalizedChannel === 'telegram' && !/^-?\d+$/.test(fromId)) {
     return res.status(400).json({
       success: false,
       message: 'Неверный формат fromId',
       error: 'INVALID_FROM_ID',
     });
   }
+
+  req.body.channel = normalizedChannel;
 
   next();
 };

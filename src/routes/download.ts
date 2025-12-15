@@ -20,7 +20,8 @@ router.post(
   validateDownloadRequest,
   async (req: Request, res: Response<ApiResponse>) => {
     try {
-      const downloadRequest: DownloadRequest = req.body;
+      const channel = (req.query.channel as string) || req.body.channel;
+      const downloadRequest: DownloadRequest = { ...req.body, channel };
 
       // Сразу отвечаем клиенту, что запрос принят
       res.status(202).json({

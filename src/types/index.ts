@@ -10,6 +10,7 @@ export interface DownloadRequest {
   url: string;
   chatId: string;
   fromId?: string; // ID пользователя для уведомлений
+  channel?: MessagingChannel;
 }
 
 export interface DownloadResponse {
@@ -37,4 +38,10 @@ export interface Config {
   rateLimitMaxRequests: number;
   proxyURL: string;
   useLegacyDownloader: boolean;
+  defaultChannel: MessagingChannel;
+  maxBotToken: string;
+  maxApiBaseUrl: string;
+  maxUploadChunkSizeMB: number;
 }
+
+export type MessagingChannel = 'telegram' | 'max';

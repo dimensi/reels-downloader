@@ -1,7 +1,10 @@
 import dotenv from 'dotenv';
-import { Config } from '../types';
+import { Config, MessagingChannel } from '../types';
 
 dotenv.config();
+
+const envChannel = process.env.DEFAULT_CHANNEL as MessagingChannel;
+const defaultChannel: MessagingChannel = envChannel === 'max' ? 'max' : 'telegram';
 
 const config: Config = {
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
@@ -14,15 +17,23 @@ const config: Config = {
   rateLimitMaxRequests: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 10,
   proxyURL: process.env.PROXY_URL || '',
   useLegacyDownloader: process.env.USE_LEGACY_DOWNLOADER === 'true',
+  defaultChannel,
+  maxBotToken: process.env.MAX_BOT_TOKEN || '',
+  maxApiBaseUrl: process.env.MAX_API_BASE_URL || '',
+  maxUploadChunkSizeMB: Number(process.env.MAX_UPLOAD_CHUNK_SIZE_MB) || 5,
 };
 
 // Валидация обязательных переменных
-if (!config.telegramBotToken) {
+if (!config.token) {
+  throw new Error('TOKEN обязательная переменная окружения');
+}
+
+if (config.defaultChannel === 'telegram' && !config.telegramBotToken) {
   throw new Error('TELEGRAM_BOT_TOKEN обязательная переменная окружения');
 }
 
-if (!config.token) {
-  throw new Error('TOKEN обязательная переменная окружения');
+if (config.defaultChannel === 'max' && !config.maxBotToken) {
+  throw new Error('MAX_BOT_TOKEN обязательная переменная окружения для канала Max');
 }
 
 export default config;

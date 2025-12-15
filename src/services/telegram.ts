@@ -6,6 +6,7 @@ import { getVideoMetadata } from '../utils/videoMetadata';
 
 class TelegramService {
   private bot: Telegraf;
+  readonly channel = 'telegram';
 
   constructor() {
     this.bot = new Telegraf(config.telegramBotToken);

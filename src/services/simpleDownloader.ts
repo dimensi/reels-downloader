@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
-import { DownloadRequest, DownloadResponse } from '../types';
-import telegramService from './telegram';
+import { DownloadRequest, DownloadResponse, MessagingChannel } from '../types';
 import config from '../config';
+import { MessagingService, resolveMessagingService } from './messaging';
 
 class NotifyService {
   private chatId: string;
@@ -9,12 +9,19 @@ class NotifyService {
   private startTime: number;
   private currentState: string;
   private url: string;
-  constructor(chatId: string, fromId: string | undefined, url: string) {
+  private readonly messagingService: MessagingService;
+  constructor(
+    chatId: string,
+    fromId: string | undefined,
+    url: string,
+    messagingService: MessagingService
+  ) {
     this.chatId = chatId;
     this.fromId = fromId;
     this.startTime = Date.now();
     this.currentState = 'START';
     this.url = url;
+    this.messagingService = messagingService;
   }
 
   changeState(state: 'START' | 'IN_PROGRESS' | 'FINISHED') {
@@ -31,21 +38,21 @@ class NotifyService {
 
     switch (this.currentState) {
       case 'START':
-        await telegramService.notifyStatus(
+        await this.messagingService.notifyStatus(
           this.fromId,
           'Начата обработка запроса',
           `URL: ${this.url}`
         );
         break;
       case 'IN_PROGRESS':
-        await telegramService.notifyStatus(
+        await this.messagingService.notifyStatus(
           this.fromId,
           'В процессе обработки запроса',
           `URL: ${this.url}`
         );
         break;
       case 'FINISHED':
-        await telegramService.notifyStatus(
+        await this.messagingService.notifyStatus(
           this.fromId,
           'Видео успешно отправлено',
           `В чат: ${this.chatId}`
@@ -60,17 +67,19 @@ class SimpleDownloaderService {
    * Основная функция для скачивания и отправки видео
    */
   async processReelDownload(request: DownloadRequest): Promise<DownloadResponse> {
-    const { url, chatId, fromId } = request;
+    const { url, chatId, fromId, channel } = request;
 
-    const notifyService = new NotifyService(chatId, fromId, url);
+    const messagingService = resolveMessagingService(channel as MessagingChannel);
+
+    const notifyService = new NotifyService(chatId, fromId, url, messagingService);
 
     try {
       await notifyService.changeState('START');
 
       // Проверяем доступность чата
-      const chatAccessible = await telegramService.checkChatAccess(chatId);
+      const chatAccessible = await messagingService.checkChatAccess(chatId);
       if (!chatAccessible) {
-        await telegramService.notifyError(
+        await messagingService.notifyError(
           fromId,
           'Чат недоступен или бот не имеет доступа к нему',
           `Chat ID: ${chatId}`
@@ -92,9 +101,9 @@ class SimpleDownloaderService {
 
       await notifyService.changeState('IN_PROGRESS');
 
-      // Отправляем видео в Telegram
+      // Отправляем видео в выбранный канал
       console.log(`Отправка видео в чат: ${chatId}`);
-      await telegramService.sendVideo(chatId, filename, '');
+      await messagingService.sendVideo(chatId, filename, '');
 
       // Удаляем файл после отправки
       await fs.remove(filename);
@@ -111,7 +120,7 @@ class SimpleDownloaderService {
       const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
 
       // Уведомляем админа об ошибке
-      await telegramService.notifyError(fromId, errorMessage, `URL: ${url}, Chat: ${chatId}`);
+      await messagingService.notifyError(fromId, errorMessage, `URL: ${url}, Chat: ${chatId}`);
 
       return {
         success: false,
@@ -161,7 +170,7 @@ class SimpleDownloaderService {
     }
   }
 
-    /**
+  /**
    * Валидация URL (дублируем логику или используем более простую проверку)
    */
   isValidUrl(url: string): boolean {

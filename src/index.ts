@@ -12,6 +12,8 @@ const startServer = async () => {
       console.log(`🚀 Сервер запущен на порту ${config.port}`);
       console.log(`📁 Папка для загрузок: ${config.downloadsPath}`);
       console.log(`🤖 Telegram Bot Token: ${config.telegramBotToken ? '✅ Настроен' : '❌ Не настроен'}`);
+      console.log(`📡 Max Bot Token: ${config.maxBotToken ? '✅ Настроен' : '❌ Не настроен'}`);
+      console.log(`🎯 Канал по умолчанию: ${config.defaultChannel}`);
       console.log(`🔧 Режим: ${config.nodeEnv}`);
       console.log(`📊 Health check: http://localhost:${config.port}/health`);
       console.log(`📚 API docs: http://localhost:${config.port}/api`);
