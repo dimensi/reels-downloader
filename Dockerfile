@@ -45,9 +45,10 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Копируем собранный проект из builder стадии
 COPY --from=builder /app/dist ./dist
-COPY cookies.txt ./cookies.txt
-# Копируем .env файл
-COPY .env .env
+
+# Опционально: копируем cookies.txt если существует (для локальной сборки)
+# При CI/CD сборке этот файл не копируется, cookies можно примонтировать через volume
+# COPY cookies.txt ./cookies.txt
 
 # Создаем папку для загрузок
 RUN mkdir -p /app/downloads

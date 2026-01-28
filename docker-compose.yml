@@ -1,26 +1,19 @@
-
 services:
   reels-downloader:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${DOCKER_IMAGE:-reels-downloader:latest}
     container_name: reels-downloader
     ports:
       - "3001:3000"
+    env_file: .env
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TOKEN=${TOKEN}
       - DOWNLOADS_PATH=/app/downloads
       - MAX_FILE_SIZE_MB=50
       - RATE_LIMIT_WINDOW_MS=900000
       - RATE_LIMIT_MAX_REQUESTS=10
     volumes:
-      # Опционально: для персистентного хранения загрузок
       - ./downloads:/app/downloads
-      # Опционально: для использования кастомных cookies
-      # - ./cookies.txt:/app/cookies.txt:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
@@ -29,8 +22,8 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - reels-network
+      - web
 
 networks:
-  reels-network:
-    driver: bridge 
+  web:
+    external: true
